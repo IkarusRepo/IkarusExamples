@@ -83,6 +83,9 @@ public:
   }
 
 protected:
+  void updateStateImpl(const Requirement& /* par */,
+                       typename Traits::template VectorTypeConst<> /* correction */) const {}
+
   template <template <typename, int, int> class RT>
   requires Dune::AlwaysFalse<RT<double, 1, 1>>::value
   auto calculateAtImpl(const Requirement& req, const Dune::FieldVector<double, Traits::mydim>& local,
