@@ -31,10 +31,10 @@
 #include <ikarus/utils/drawing/griddrawer.hh>
 #include <ikarus/utils/eigendunetransformations.hh>
 #include <ikarus/utils/init.hh>
+#include <ikarus/utils/listener/controlvtkwriter.hh>
+#include <ikarus/utils/listener/genericlistener.hh>
+#include <ikarus/utils/listener/nonlinearsolverlogger.hh>
 #include <ikarus/utils/nonlinearoperator.hh>
-#include <ikarus/utils/observer/controlvtkwriter.hh>
-#include <ikarus/utils/observer/genericobserver.hh>
-#include <ikarus/utils/observer/nonlinearsolverlogger.hh>
 #include <ikarus/utils/pythonautodiffdefinitions.hh>
 
 using namespace Ikarus;
@@ -179,15 +179,15 @@ int main(int argc, char** argv) {
 
   /// Create Observer to write information of the non-linear solver on the
   /// console
-  auto nonLinearSolverObserver = std::make_shared<NonLinearSolverLogger>();
+  auto nonLinearSolverObserver = NonLinearSolverLogger();
 
   const int loadSteps = 10;
   Eigen::Matrix3Xd lambdaAndDisp;
   lambdaAndDisp.setZero(Eigen::NoChange, loadSteps + 1);
   /// Create Observer which executes when control routines messages
   /// SOLUTION_CHANGED
-  auto lvkObserver = std::make_shared<Ikarus::GenericObserver<Ikarus::ControlMessages>>(
-      Ikarus::ControlMessages::SOLUTION_CHANGED, [&](int step) {
+  auto lvkObserver =
+      Ikarus::GenericListener<Ikarus::ControlMessages>(Ikarus::ControlMessages::SOLUTION_CHANGED, [&](int step) {
         lambdaAndDisp(0, step) = lambda;
         lambdaAndDisp(1, step) = d[2];
         lambdaAndDisp(2, step) = d[3];
@@ -195,15 +195,16 @@ int main(int argc, char** argv) {
 
   /// Create Observer which writes vtk files when control routines messages
   /// SOLUTION_CHANGED
-  auto vtkWriter = std::make_shared<ControlSubsamplingVertexVTKWriter<std::remove_cvref_t<decltype(basis.flat())>>>(
-      basis.flat(), d, 2);
-  vtkWriter->setFieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2);
-  vtkWriter->setFileNamePrefix("iks007_vonMisesTruss");
+  auto vtkWriter = ControlSubsamplingVertexVTKWriter<std::remove_cvref_t<decltype(basis.flat())>>(basis.flat(), d, 2);
+  vtkWriter.setFieldInfo("displacement", Dune::VTK::FieldInfo::Type::vector, 2);
+  vtkWriter.setFileNamePrefix("iks007_vonMisesTruss");
 
   /// Create loadcontrol
   auto lc = Ikarus::LoadControl(nr, loadSteps, {0, 30});
-  lc.nonlinearSolver().subscribeAll(nonLinearSolverObserver);
-  lc.subscribeAll({vtkWriter, lvkObserver});
+
+  nonLinearSolverObserver.subscribeTo(lc.nonlinearSolver());
+  vtkWriter.subscribeTo(lc);
+  lvkObserver.subscribeTo(lc);
 
   /// Execute!
   lc.run();
