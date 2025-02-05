@@ -31,8 +31,8 @@
 #include <ikarus/utils/dirichletvalues.hh>
 #include <ikarus/utils/drawing/griddrawer.hh>
 #include <ikarus/utils/init.hh>
+#include <ikarus/utils/listener/controlvtkwriter.hh>
 #include <ikarus/utils/nonlinearoperator.hh>
-#include <ikarus/utils/observer/controlvtkwriter.hh>
 #include <ikarus/utils/pythonautodiffdefinitions.hh>
 
 using namespace Ikarus;
