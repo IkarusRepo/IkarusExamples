@@ -58,7 +58,7 @@ public:
   using BasisHandler = typename Traits::BasisHandler;
   using FlatBasis    = typename Traits::FlatBasis;
   using Requirement =
-      FERequirementsFactory<FESolutions::displacement, FEParameter::loadfactor, Traits::useEigenRef>::type;
+      FERequirements<FESolutions::displacement, FEParameter::loadfactor>;
   using LocalView = typename Traits::LocalView;
   using Geometry  = typename Traits::Geometry;
   using Element   = typename Traits::Element;
@@ -156,13 +156,11 @@ int main(int argc, char** argv) {
   /// Create assembler
   auto denseFlatAssembler = makeDenseFlatAssembler(fes, dirichletValues);
 
-  /// Create non-linear operator
-  double lambda = 0;
-  Eigen::VectorXd d;
-  d.setZero(basis.flat().size());
-
-  auto req = AutoDiffFE::Requirement();
-  req.insertGlobalSolution(d).insertParameter(lambda);
+  /// Create fe requirement
+  auto req = AutoDiffFE::Requirement(basis);
+  const auto& d = req.globalSolution();
+  const auto& lambda = req.parameter();
+  
   denseFlatAssembler->bind(req, Ikarus::AffordanceCollections::elastoStatics, Ikarus::DBCOption::Full);
 
   /// Choose linear solver
@@ -202,11 +200,11 @@ int main(int argc, char** argv) {
 
   /// Create loadcontrol
   auto lc = Ikarus::LoadControl(nr, loadSteps, {0, 30});
-  lc.nonlinearSolver().subscribeAll(nonLinearSolverObserver);
+  lc.nonLinearSolver().subscribeAll(nonLinearSolverObserver);
   lc.subscribeAll({vtkWriter, lvkObserver});
 
   /// Execute!
-  lc.run();
+  lc.run(req);
 
   /// Postprocess
   using namespace matplot;

@@ -9,8 +9,8 @@
 #include <ikarus/utils/nonlinearoperator.hh>
 #include <ikarus/utils/observer/nonlinearsolverlogger.hh>
 
-auto f(double& x) { return 0.5 * x * x + x - 2; }
-auto df(double& x) { return x + 1; }
+auto func(const double& x) { return 0.5 * x * x + x - 2; }
+auto funcDerivative(const double& x) { return x + 1; }
 
 void newtonRaphsonVeryBasicExample() {
   double x               = 13;
@@ -18,19 +18,20 @@ void newtonRaphsonVeryBasicExample() {
   const int maxIter      = 20;
   const double xExpected = std::sqrt(5.0) - 1.0;
 
-  auto fvLambda  = [&](auto&& x) { return f(x); };
-  auto dfvLambda = [&](auto&& x) { return df(x); };
-  Ikarus::NonLinearOperator nonLinOp(Ikarus::functions(fvLambda, dfvLambda), Ikarus::parameter(x));
+  auto fvLambda  = [&](auto&& x) { return func(x); };
+  auto dfvLambda = [&](auto&& x) { return funcDerivative(x); };
+  auto  nonLinOp = Ikarus::makeNonLinearOperator(Ikarus::functions(fvLambda, dfvLambda), x);
 
   /// Standard implementation
   int iterCount = 1;
-  while (abs(nonLinOp.value()) > eps and iterCount <= maxIter) {
-    x -= nonLinOp.value() / nonLinOp.derivative();
-    nonLinOp.updateAll();
+  while (abs(nonLinOp(x)) > eps and iterCount <= maxIter) {
+    const auto f = nonLinOp(x);
+    const auto df = derivative(nonLinOp)(x);
+    x -= f / df;
     iterCount++;
 
-    std::cout << "nonlinearOperator, value(): " << nonLinOp.value() << "\n";
-    std::cout << "nonlinearOperator, x: " << nonLinOp.firstParameter() << "\n";
+    std::cout << "f, value: " << f << "\n";
+    std::cout << "nonlinearOperator, x: " << x << "\n";
   }
 
   /// Implementation with Ikarus
@@ -57,9 +58,9 @@ public:
 void newtonRaphsonBasicExampleWithLogger() {
   double x = 13;
 
-  auto fvLambda  = [&](auto&& x) { return f(x); };
-  auto dfvLambda = [&](auto&& x) { return df(x); };
-  Ikarus::NonLinearOperator nonLinOp(Ikarus::functions(fvLambda, dfvLambda), Ikarus::parameter(x));
+  auto fvLambda  = [&](auto&& x) { return func(x); };
+  auto dfvLambda = [&](auto&& x) { return funcDerivative(x); };
+  auto  nonLinOp = Ikarus::makeNonLinearOperator(Ikarus::functions(fvLambda, dfvLambda), x);
 
   const double eps       = 1e-10;
   const int maxIter      = 20;
